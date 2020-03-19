@@ -70,6 +70,7 @@ export class SpaceObject {
    * @param {String} options.labelUrl Label becomes a link that goes to this url.
    * @param {boolean} options.hideOrbit If true, don't show an orbital ellipse. Defaults false.
    * @param {Ephem} options.ephem Ephemerides for this orbit
+   * @param {EphemTable} options.ephemTable Tabular Ephemerides for this orbit
    * @param {String} options.textureUrl Texture for sprite
    * @param {String} options.basePath Base path for simulation assets and data
    * @param {Object} options.ecliptic Contains settings related to ecliptic
@@ -85,6 +86,8 @@ export class SpaceObject {
   constructor(id, options, contextOrSimulation, autoInit = true) {
     this._id = id;
     this._options = options || {};
+    this._useEphemTable = this._options.ephemTable !== undefined;
+    this._isStaticObject = !this._options.ephem && !this._useEphemTable;
 
     // if (contextOrSimulation instanceOf Simulation) {
     if (true) {
@@ -174,14 +177,14 @@ export class SpaceObject {
       }
 
       // Don't create a sprite - do it on the GPU instead.
-      this._particleIndex = this._context.objects.particles.addParticle(
-        this._options.ephem,
-        {
-          particleSize: this._options.particleSize,
-          color: this.getColor(),
-        },
-      );
-      this._renderMethod = 'PARTICLESYSTEM';
+      // this._particleIndex = this._context.objects.particles.addParticle(
+      //   this._options.ephem,
+      //   {
+      //     particleSize: this._options.particleSize,
+      //     color: this.getColor(),
+      //   },
+      // );
+      // this._renderMethod = 'PARTICLESYSTEM';
     }
   }
 
@@ -289,7 +292,8 @@ export class SpaceObject {
     if (this._orbit) {
       return this._orbit;
     }
-    return new Orbit(this._options.ephem, {
+    const ephem = this._useEphemTable ? this._options.ephemTable : this._options.ephem;
+    return new Orbit(ephem, {
       color: this._options.theme ? this._options.theme.orbitColor : undefined,
       eclipticLineColor: this._options.ecliptic
         ? this._options.ecliptic.lineColor
@@ -504,7 +508,7 @@ export class SpaceObject {
    * @return {boolean} Whether this object can change its position.
    */
   isStaticObject() {
-    return !this._options.ephem;
+    return this._isStaticObject;
   }
 
   /**

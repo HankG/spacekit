@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import julian from 'julian';
 
 import { rescaleXYZ } from './Scale';
+import {EphemTable} from "./EphemTable";
 
 const pi = Math.PI;
 const sin = Math.sin;
@@ -22,7 +23,8 @@ export const OrbitType = Object.freeze({
   PARABOLIC: 1,
   HYPERBOLIC: 2,
   ELLIPTICAL: 3,
-  UNKNOWN: 4,
+  LOOKUP: 4,
+  UNKNOWN: 5,
 });
 
 /**
@@ -31,6 +33,10 @@ export const OrbitType = Object.freeze({
  * @return {OrbitType} Name of orbit type
  */
 export function getOrbitType(ephem) {
+  if (ephem instanceof EphemTable) {
+    return OrbitType.LOOKUP;
+  }
+
   let e = ephem.get('e');
   if (e > 0.8 && e < 1.2) {
     return OrbitType.PARABOLIC;
@@ -104,8 +110,15 @@ export class Orbit {
         return this.getPositionAtTimeHyperbolic(jd, debug);
       case OrbitType.ELLIPTICAL:
         return this.getPositionAtTimeELLIPTICAL(jd, debug);
+      case OrbitType.LOOKUP:
+        return this.getPositionAtTimeLookup(jd, debug);
     }
     throw new Error('No handler for this type of orbit');
+  }
+
+  getPositionAtTimeLookup(jd, debug) {
+    const point = this._ephem.getPositionAtTime(jd, debug);
+    return rescaleXYZ(point[0], point[1], point[2]);
   }
 
   getPositionAtTimeParabolic(jd, debug) {
@@ -285,6 +298,10 @@ export class Orbit {
     // For hyperbolic and parabolic orbits, decide on a time range to draw
     // them.
     // TODO(ian): Should we compute around current position, not time of perihelion?
+    const orbitType = getOrbitType(this._ephem);
+    if (orbitType === OrbitType.LOOKUP) {
+      return this.getLookupOrbit()
+    }
     const tp = this._ephem.get('tp');
     const centerDate = tp ? julian.toDate(tp) : new Date();
 
@@ -353,6 +370,23 @@ export class Orbit {
     return this._orbitShape;
   }
 
+  getLookupOrbit() {
+    if (this._orbitShape) {
+      return this._orbitShape;
+    }
+    const points = this._ephem.table.map(line => new THREE.Vector3(line[1], line[2], line[3]));
+    const pointGeometry = new THREE.Geometry();
+    pointGeometry.vertices = points;
+
+    this._orbitShape = new THREE.Line(
+      pointGeometry,
+      new THREE.LineBasicMaterial({
+        color: new THREE.Color(this._options.color || 0x444444),
+      }),
+      THREE.LineStrip,
+    );
+    return this._orbitShape;
+  }
   /**
    * @return {THREE.Line} The ellipse object that represents this orbit.
    */

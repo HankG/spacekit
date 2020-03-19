@@ -1,5 +1,11 @@
 venv
 
+### JetBrains ###
+.idea
+
+### NPM ###
+package-lock.json
+
 ### Vim ###
 [._]*.s[a-w][a-z]
 [._]s[a-w][a-z]
