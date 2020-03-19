@@ -12,7 +12,7 @@ const viz = new Spacekit.Simulation(document.getElementById('main-container'), {
 });
 
 // Create a skybox using NASA TYCHO artwork.
-viz.createSkybox();
+viz.createSkybox(Spacekit.SkyboxPresets.NASA_TYCHO);
 
 // Create our first object - the sun - using a preset space object.
 viz.createObject('Sun', Spacekit.SpaceObjectPresets.SUN);
@@ -180,7 +180,7 @@ const asteroid = viz.createObject('Lacadiera', {
   ephemTable: ephemTable,
   labelText: 'Lacadiera',
 });
-asteroid.getOrbit().setHexColor(0x00ff00);
+asteroid.getOrbit().setHexColor(0x00ff00)
 
 // Set up viewport
 viz.zoomToFit(asteroid);
