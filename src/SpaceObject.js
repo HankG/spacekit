@@ -69,6 +69,7 @@ export class SpaceObject {
    * @param {String} options.labelText Text label to display above object (set undefined for no label)
    * @param {String} options.labelUrl Label becomes a link that goes to this url.
    * @param {boolean} options.hideOrbit If true, don't show an orbital ellipse. Defaults false.
+   * @param {Number} options.orbitLeadTrailYears the amount of time an orbit should have lead/trail time. Only applicable for non-elliptical and ephemeris table orbits.
    * @param {Ephem} options.ephem Ephemerides for this orbit
    * @param {EphemTable} options.ephemTable Tabular Ephemerides for this orbit
    * @param {String} options.textureUrl Texture for sprite
@@ -109,6 +110,7 @@ export class SpaceObject {
     this._position = rescaleArray(this._options.position || [0, 0, 0]);
     this._orbitAround = undefined;
     this._scale = this._options.scale || [1, 1, 1];
+    this._orbitTrail = undefined;
 
     // The method of rendering used for this object (e.g. SPRITE, PARTICLESYSTEM).
     this._renderMethod = undefined;
@@ -176,15 +178,24 @@ export class SpaceObject {
         }
       }
 
-      // Don't create a sprite - do it on the GPU instead.
-      // this._particleIndex = this._context.objects.particles.addParticle(
-      //   this._options.ephem,
-      //   {
-      //     particleSize: this._options.particleSize,
-      //     color: this.getColor(),
-      //   },
-      // );
-      // this._renderMethod = 'PARTICLESYSTEM';
+      if (this._useEphemTable) {
+        this._object3js = this.createSprite();
+        if (this._simulation) {
+          // Add it all to visualization.
+          this._simulation.addObject(this, true);
+        }
+        this._renderMethod = 'SPRITE';
+      } else {
+        //Don't create a sprite - do it on the GPU instead.
+        this._particleIndex = this._context.objects.particles.addParticle(
+            this._options.ephem,
+            {
+              particleSize: this._options.particleSize,
+              color: this.getColor(),
+            },
+        );
+        this._renderMethod = 'PARTICLESYSTEM';
+      }
     }
   }
 
@@ -294,6 +305,7 @@ export class SpaceObject {
     }
     const ephem = this._useEphemTable ? this._options.ephemTable : this._options.ephem;
     return new Orbit(ephem, {
+      orbitLeadTrailYears: this._options.orbitLeadTrailYears,
       color: this._options.theme ? this._options.theme.orbitColor : undefined,
       eclipticLineColor: this._options.ecliptic
         ? this._options.ecliptic.lineColor
@@ -401,12 +413,20 @@ export class SpaceObject {
       );
       if (!this._options.hideOrbit) {
         this._orbit
-          .getOrbitShape()
+          .getOrbitShape(jd)
           .position.set(parentPos[0], parentPos[1], parentPos[2]);
       }
       if (!newpos) {
         newpos = this.getPosition(jd);
       }
+    }
+
+    if (!this._options.hideOrbit && !this._orbit.timeInRenderedOrbitSpan(jd)) {
+      const oldTrail = this._orbitTrail;
+      this._simulation.getScene().remove(this._orbitTrail);
+      this._orbitTrail = this._orbit.getOrbitShape(jd, true);
+      this._orbitTrail.material = oldTrail.material;
+      this._simulation.getScene().add(this._orbitTrail);
     }
 
     // TODO(ian): Determine this based on orbit and camera position change.
@@ -435,7 +455,8 @@ export class SpaceObject {
       ret.push(this._object3js);
     }
     if (this._orbit) {
-      ret.push(this._orbit.getOrbitShape());
+      this._orbitTrail = this._orbit.getOrbitShape();
+      ret.push(this._orbitTrail);
       if (this._options.ecliptic && this._options.ecliptic.displayLines) {
         ret.push(this._orbit.getLinesToEcliptic());
       }

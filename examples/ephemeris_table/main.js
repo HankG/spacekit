@@ -7,7 +7,7 @@ const viz = new Spacekit.Simulation(document.getElementById('main-container'), {
   },
   debug: {
     // showAxesHelper: true,
-    showStats: true,
+    showStats: false,
   }
 });
 
@@ -178,6 +178,7 @@ const ephemTable = new Spacekit.EphemTable(table = [
 
 const asteroid = viz.createObject('Lacadiera', {
   ephemTable: ephemTable,
+  orbitLeadTrailYears:3.38/2.0,
   labelText: 'Lacadiera',
 });
 asteroid.getOrbit().setHexColor(0x00ff00)
