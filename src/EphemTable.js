@@ -41,7 +41,7 @@ export class EphemTable {
 
   getPositionAtTime(jd, debug) {
     if (jd <= this.table[0][0]) {
-      return [table[0][1], table[0][2], table[0][3]];
+      return [this.table[0][1], this.table[0][2], this.table[0][3]];
     }
 
     const last = this.table[this.table.length - 1];
@@ -61,14 +61,14 @@ export class EphemTable {
 
     let index0 = bestLineIndex;
     let index1 = index0 + 1;
-    if (index0 === table.length) {
+    if (index0 === this.table.length) {
       index1 = bestLineIndex;
       index0 = index0 - 1;
     }
 
-    const x = this.interpolateValue(jd, table[index0][0], table[index1][0], table[index0][1], table[index1][1]);
-    const y = this.interpolateValue(jd, table[index0][0], table[index1][0], table[index0][2], table[index1][2]);
-    const z = this.interpolateValue(jd, table[index0][0], table[index1][0], table[index0][3], table[index1][3]);
+    const x = this.interpolateValue(jd, this.table[index0][0], this.table[index1][0], this.table[index0][1], this.table[index1][1]);
+    const y = this.interpolateValue(jd, this.table[index0][0], this.table[index1][0], this.table[index0][2], this.table[index1][2]);
+    const z = this.interpolateValue(jd, this.table[index0][0], this.table[index1][0], this.table[index0][3], this.table[index1][3]);
 
     return [x, y, z];
   }

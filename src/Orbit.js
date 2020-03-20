@@ -9,7 +9,11 @@ const sin = Math.sin;
 const cos = Math.cos;
 const sqrt = Math.sqrt;
 
-const DEFALUT_LEAD_TRAIL_YEARS_DURATION = 10;
+const DEFAULT_LEAD_TRAIL_YEARS = 10;
+const DEFAULT_ORBIT_PATH_SETTINGS = {
+  leadDurationYears: DEFAULT_LEAD_TRAIL_YEARS,
+  trailDurationYears: DEFAULT_LEAD_TRAIL_YEARS
+};
 
 /**
  * Special cube root function that assumes input is always positive.
@@ -65,7 +69,7 @@ export class Orbit {
   /**
    * @param {Ephem} ephem The ephemerides that define this orbit.
    * @param {Object} options
-   * @param {Number} options.orbitLeadTrailYears the amount of time an orbit should have lead/trail time. Only applicable for non-elliptical and ephemeris table orbits.
+   * @param {Object} options.orbitPathSettings the amount of time an orbit should have lead/trail time. Only applicable for non-elliptical and ephemeris table orbits.
    * @param {Object} options.color The color of the orbital ellipse.
    * @param {Object} options.eclipticLineColor The color of lines drawn
    * perpendicular to the ecliptic in order to illustrate depth (defaults to
@@ -83,8 +87,16 @@ export class Orbit {
      */
     this._options = options || {};
 
-    if (this._options.orbitLeadTrailYears === undefined) {
-      this._options.orbitLeadTrailYears = DEFALUT_LEAD_TRAIL_YEARS_DURATION;
+    if (this._options.orbitPathSettings === undefined) {
+      this._options.orbitPathSettings = DEFAULT_ORBIT_PATH_SETTINGS;
+    }
+
+    if (this._options.orbitPathSettings.leadDurationYears === undefined) {
+      this._options.orbitPathSettings.leadDurationYears = DEFAULT_LEAD_TRAIL_YEARS;
+    }
+
+    if (this._options.orbitPathSettings.trailDurationYears === undefined) {
+      this._options.orbitPathSettings.trailDurationYears = DEFAULT_LEAD_TRAIL_YEARS;
     }
 
     /**
@@ -309,24 +321,32 @@ export class Orbit {
     // For hyperbolic and parabolic orbits, decide on a time range to draw
     // them.
     // TODO(ian): Should we compute around current position, not time of perihelion?
+    const millisecondsPerYear = 86400.0 * 1000 * 365;
     const orbitType = getOrbitType(this._ephem);
     const tp = orbitType === OrbitType.LOOKUP ? jd : this._ephem.get('tp');
     const centerDate = tp ? julian.toDate(tp) : new Date();
+    const centerDateMS = centerDate.getTime();
+    const startDateMS = centerDateMS - this._options.orbitPathSettings.trailDurationYears * millisecondsPerYear;
+    const endDateMS = centerDateMS + this._options.orbitPathSettings.leadDurationYears * millisecondsPerYear;
+    const startDate = new Date(startDateMS);
+    const endDate = new Date(endDateMS);
+    const startJd = julian.toJulianDay(startDate);
+    const endJd = julian.toJulianDay(endDate);
 
-    const startJd = julian.toJulianDay(
-      new Date(
-        centerDate.getFullYear() - this._options.orbitLeadTrailYears,
-        centerDate.getMonth(),
-        centerDate.getDate(),
-      ),
-    );
-    const endJd = julian.toJulianDay(
-      new Date(
-        centerDate.getFullYear() + this._options.orbitLeadTrailYears,
-        centerDate.getMonth(),
-        centerDate.getDate(),
-      ),
-    );
+    // const startJd = julian.toJulianDay(
+    //   new Date(
+    //     centerDate.getFullYear() - this._options.orbitPathSettings.trailDurationYears,
+    //     centerDate.getMonth(),
+    //     centerDate.getDate(),
+    //   ),
+    // );
+    // const endJd = julian.toJulianDay(
+    //   new Date(
+    //     centerDate.getFullYear() + this._options.orbitPathSettings.leadDurationYears,
+    //     centerDate.getMonth(),
+    //     centerDate.getDate(),
+    //   ),
+    // );
 
     this._orbitStart = startJd;
     this._orbitStop = endJd;
