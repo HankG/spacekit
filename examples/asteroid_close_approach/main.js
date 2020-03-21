@@ -1,7 +1,8 @@
 // Create the visualization and put it in our div.
 const viz = new Spacekit.Simulation(document.getElementById('main-container'), {
   basePath: '../../src',
-  startDate: new Date(2019,9,31, 14, 45, 0,0),
+  //startDate: new Date('2019-10-31T14:45:00.000Z'),
+  startDate: new Date('2019-10-31'),
   jdPerSecond: 0.01,
   startPaused: true,
   unitsPerAu: 1,
@@ -157,14 +158,21 @@ viz.getViewer().followObject(earthSphere, [0, 0, 0]);
 
 // Set up event listeners
 
-document.getElementById('btn-start').onclick = function() {
+document.getElementById('btn-forward').onclick = function() {
+  viz.setJdPerSecond(Math.abs(viz.getJdPerSecond()))
   viz.start();
 };
+
+document.getElementById('btn-backward').onclick = function() {
+  viz.setJdPerSecond(-Math.abs(viz.getJdPerSecond()))
+  viz.start();
+};
+
 document.getElementById('btn-stop').onclick = function() {
   viz.stop();
 };
 document.getElementById('btn-set-time').onclick = function() {
-  viz.setDate(new Date(prompt('Enter a date (YYYY-mm-dd)')));
+  viz.setDate(new Date(prompt('Enter a date (YYYY-mm-dd or YYYY-mm-ddTHH:mm:ss.sssZ)')));
 };
 
 document.getElementById('btn-set-jd-per-second').onclick = function() {
@@ -172,11 +180,11 @@ document.getElementById('btn-set-jd-per-second').onclick = function() {
 };
 
 document.getElementById('btn-faster').onclick = function() {
-  viz.setJdDelta(viz.getJdDelta() * 1.5);
+  viz.setJdPerSecond(viz.getJdPerSecond() * 1.5);
 };
 
 document.getElementById('btn-slower').onclick = function() {
-  viz.setJdDelta(viz.getJdDelta() * 0.5);
+  viz.setJdPerSecond(viz.getJdPerSecond() * 0.5);
 };
 
 const dateElt = document.getElementById('current-date');
