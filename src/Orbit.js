@@ -412,7 +412,8 @@ export class Orbit {
     }
     const points = this._ephem.table
         .filter(line => line[0] >= startJd && line[0] <= stopJd)
-        .map(line => new THREE.Vector3(line[1], line[2], line[3]));
+        .map(line => rescaleXYZ(line[1], line[2], line[3]))
+        .map(values => new THREE.Vector3(values[0], values[1], values[2]));
     const pointGeometry = new THREE.Geometry();
     pointGeometry.vertices = points;
 

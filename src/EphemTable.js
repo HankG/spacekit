@@ -1,4 +1,5 @@
 import * as Units from './Units';
+import {rescaleArray} from "./Scale";
 
 /**
  * A class representing an ephemeris look-up table for defining a space object.
