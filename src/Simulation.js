@@ -22,6 +22,7 @@ import { SphereObject } from './SphereObject';
 import { Stars } from './Stars';
 import { getDefaultBasePath } from './util';
 import { setScaleFactor, rescaleArray, rescaleNumber } from './Scale';
+import {EllipsoidObject} from "./EllipsoidObject";
 
 /**
  * The main entrypoint of a visualization.
@@ -408,6 +409,16 @@ export class Simulation {
 
     delete this._subscribedObjects[obj.getId()];
   }
+
+  /**
+   * Shortcut for creating a new ShapeObject belonging to this visualization.
+   * Takes any ShapeObject arguments.
+   * @see ShapeObject
+   */
+  createEllipsoid(...args) {
+    return new EllipsoidObject(...args, this);
+  }
+
 
   /**
    * Shortcut for creating a new SpaceObject belonging to this visualization.
