@@ -2,12 +2,18 @@ import * as THREE from 'three';
 import julian from 'julian';
 
 import { rescaleXYZ } from './Scale';
-import {EphemTable} from "./EphemTable";
+import { EphemTable } from './EphemTable';
 
 const pi = Math.PI;
 const sin = Math.sin;
 const cos = Math.cos;
 const sqrt = Math.sqrt;
+
+const DEFAULT_LEAD_TRAIL_YEARS = 10;
+const DEFAULT_ORBIT_PATH_SETTINGS = {
+  leadDurationYears: DEFAULT_LEAD_TRAIL_YEARS,
+  trailDurationYears: DEFAULT_LEAD_TRAIL_YEARS,
+};
 
 /**
  * Special cube root function that assumes input is always positive.
@@ -63,6 +69,7 @@ export class Orbit {
   /**
    * @param {Ephem} ephem The ephemerides that define this orbit.
    * @param {Object} options
+   * @param {Object} options.orbitPathSettings the amount of time an orbit should have lead/trail time. Only applicable for non-elliptical and ephemeris table orbits.
    * @param {Object} options.color The color of the orbital ellipse.
    * @param {Object} options.eclipticLineColor The color of lines drawn
    * perpendicular to the ecliptic in order to illustrate depth (defaults to
@@ -79,6 +86,18 @@ export class Orbit {
      * Options (see class definition for details)
      */
     this._options = options || {};
+
+    if (this._options.orbitPathSettings === undefined) {
+      this._options.orbitPathSettings = DEFAULT_ORBIT_PATH_SETTINGS;
+    }
+
+    if (this._options.orbitPathSettings.leadDurationYears === undefined) {
+      this._options.orbitPathSettings.leadDurationYears = DEFAULT_LEAD_TRAIL_YEARS;
+    }
+
+    if (this._options.orbitPathSettings.trailDurationYears === undefined) {
+      this._options.orbitPathSettings.trailDurationYears = DEFAULT_LEAD_TRAIL_YEARS;
+    }
 
     /**
      * Cached orbital points.
@@ -294,33 +313,51 @@ export class Orbit {
     return rescaleXYZ(X, Y, Z);
   }
 
-  getOrbitShape() {
+  timeInRenderedOrbitSpan(jd) {
+    return jd >= this._orbitStart && jd <= this._orbitStop;
+  }
+
+  getOrbitShape(jd, forceCompute = false) {
     // For hyperbolic and parabolic orbits, decide on a time range to draw
     // them.
     // TODO(ian): Should we compute around current position, not time of perihelion?
+    const millisecondsPerYear = 86400.0 * 1000 * 365;
     const orbitType = getOrbitType(this._ephem);
-    if (orbitType === OrbitType.LOOKUP) {
-      return this.getLookupOrbit()
-    }
-    const tp = this._ephem.get('tp');
+    const tp = orbitType === OrbitType.LOOKUP ? jd : this._ephem.get('tp');
     const centerDate = tp ? julian.toDate(tp) : new Date();
+    const centerDateMS = centerDate.getTime();
+    const startDateMS =
+      centerDateMS -
+      this._options.orbitPathSettings.trailDurationYears * millisecondsPerYear;
+    const endDateMS =
+      centerDateMS +
+      this._options.orbitPathSettings.leadDurationYears * millisecondsPerYear;
+    const startDate = new Date(startDateMS);
+    const endDate = new Date(endDateMS);
+    const startJd = julian.toJulianDay(startDate);
+    const endJd = julian.toJulianDay(endDate);
 
-    // Default to +- 10 years
-    // TODO(ian): A way to configure this logic
-    const startJd = julian.toJulianDay(
-      new Date(
-        centerDate.getFullYear() - 10,
-        centerDate.getMonth(),
-        centerDate.getDate(),
-      ),
-    );
-    const endJd = julian.toJulianDay(
-      new Date(
-        centerDate.getFullYear() + 10,
-        centerDate.getMonth(),
-        centerDate.getDate(),
-      ),
-    );
+    // const startJd = julian.toJulianDay(
+    //   new Date(
+    //     centerDate.getFullYear() - this._options.orbitPathSettings.trailDurationYears,
+    //     centerDate.getMonth(),
+    //     centerDate.getDate(),
+    //   ),
+    // );
+    // const endJd = julian.toJulianDay(
+    //   new Date(
+    //     centerDate.getFullYear() + this._options.orbitPathSettings.leadDurationYears,
+    //     centerDate.getMonth(),
+    //     centerDate.getDate(),
+    //   ),
+    // );
+
+    this._orbitStart = startJd;
+    this._orbitStop = endJd;
+
+    if (forceCompute) {
+      this._orbitShape = undefined;
+    }
 
     switch (getOrbitType(this._ephem)) {
       case OrbitType.HYPERBOLIC:
@@ -337,6 +374,8 @@ export class Orbit {
         );
       case OrbitType.ELLIPTICAL:
         return this.getEllipse();
+      case OrbitType.LOOKUP:
+        return this.getLookupOrbit(startJd, endJd);
     }
     throw new Error('Unknown orbit shape');
   }
@@ -370,11 +409,14 @@ export class Orbit {
     return this._orbitShape;
   }
 
-  getLookupOrbit() {
+  getLookupOrbit(startJd, stopJd) {
     if (this._orbitShape) {
       return this._orbitShape;
     }
-    const points = this._ephem.table.map(line => new THREE.Vector3(line[1], line[2], line[3]));
+    const points = this._ephem.table
+      .filter(line => line[0] >= startJd && line[0] <= stopJd)
+      .map(line => rescaleXYZ(line[1], line[2], line[3]))
+      .map(values => new THREE.Vector3(values[0], values[1], values[2]));
     const pointGeometry = new THREE.Geometry();
     pointGeometry.vertices = points;
 
