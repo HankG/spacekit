@@ -177,14 +177,14 @@ export class SpaceObject {
       }
 
       // Don't create a sprite - do it on the GPU instead.
-      // this._particleIndex = this._context.objects.particles.addParticle(
-      //   this._options.ephem,
-      //   {
-      //     particleSize: this._options.particleSize,
-      //     color: this.getColor(),
-      //   },
-      // );
-      // this._renderMethod = 'PARTICLESYSTEM';
+      this._particleIndex = this._context.objects.particles.addParticle(
+        this._options.ephem,
+        {
+          particleSize: this._options.particleSize,
+          color: this.getColor(),
+        },
+      );
+      this._renderMethod = 'PARTICLESYSTEM';
     }
   }
 
