@@ -405,6 +405,14 @@ export class SpaceObject {
       this._object3js.position.set(newpos[0], newpos[1], newpos[2]);
     }
 
+    if (!this._options.hideOrbit && !this._orbit.timeInRenderedOrbitSpan(jd)) {
+      const oldTrail = this._orbitPath;
+      this._simulation.getScene().remove(this._orbitPath);
+      this._orbitPath = this._orbit.getOrbitShape(jd, true);
+      this._orbitPath.material = oldTrail.material;
+      this._simulation.getScene().add(this._orbitPath);
+    }
+
     if (this._orbitAround) {
       const parentPos = this._orbitAround.getPosition(jd);
       this._context.objects.particles.setParticleOrigin(
@@ -419,14 +427,6 @@ export class SpaceObject {
       if (!newpos) {
         newpos = this.getPosition(jd);
       }
-    }
-
-    if (!this._options.hideOrbit && !this._orbit.timeInRenderedOrbitSpan(jd)) {
-      const oldTrail = this._orbitPath;
-      this._simulation.getScene().remove(this._orbitPath);
-      this._orbitPath = this._orbit.getOrbitShape(jd, true);
-      this._orbitPath.material = oldTrail.material;
-      this._simulation.getScene().add(this._orbitPath);
     }
 
     // TODO(ian): Determine this based on orbit and camera position change.
