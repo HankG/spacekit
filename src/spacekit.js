@@ -12,6 +12,7 @@ export * from './ShapeObject';
 export * from './SphereObject';
 export * from './KeplerParticles';
 export * from './Stars';
+export * from './StaticParticles';
 export * from './Units';
 
 import * as _THREE from 'three';
